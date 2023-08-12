@@ -89,9 +89,17 @@
                             </div>
 
                             <script>
-                                function setCustomMessage(selectElement) {
-                                    selectElement.setCustomValidity('Harap Dipilih Bulannya');
+                                function handleInvalidSelect() {
+                                    var select = document.getElementById('bulan');
+                                    if (select.value === '') {
+                                        select.setCustomValidity('Harap Pilih Bulan');
+                                    } else {
+                                        select.setCustomValidity('');
+                                    }
                                 }
+                                    document.getElementById('bulan').addEventListener('change', function() {
+                                    this.setCustomValidity('');
+                                    });
                             </script>
                             
                         </div>
@@ -104,8 +112,9 @@
                             <div class="col-md-3" style="margin-left: 30px;">
                                 <select name="status" id="status" class="form-control">
                                 <option value="">- PILIH STATUS -</option>
-                                <option value="1">Check Out</option>
-                                <option value="0">Check In</option>
+                                <option value="in">Hadir</option>
+                                <option value="sick">Sakit/Izin</option>
+                                <option value="alpha">Alpha</option>
                                 </select>
                             </div>
  
@@ -152,7 +161,7 @@
             <th>Tanggal</th>
             <th>Jam</th>
             <th>Jenis Absen</th>
-            <th>Status</th>
+            {{-- <th>Status</th> --}}
             <th>Detail</th>
         </tr>
     </thead>
@@ -170,13 +179,24 @@
                 <td>{{$item->user->name}}</td>
                 <td>{{$item->created_at->format('Y-m-d')}}</td>
                 <td>{{$item->created_at->format('H:i:s')}}</td>
-                <td>{{$item->detail[0]['type']}}</td>
-                @if ($item->status == 0)
+                @if ($item->detail[0]['type'] == "in" || $item->detail[0]['type'] == "out")
+                    <td>Hadir</td>
+                    <td><a href="{{ route('attendance.show', $item->id) }}" class="btn btn-sm btn-secondary">Show</a></td>
+                @else
+                    @if ($item->detail[0]['type'] == "sick")
+                        <td>Sakit/Izin</td>
+                        <td><a href="{{ route('attendance.show', $item->id) }}" class="btn btn-sm btn-secondary">Show</a></td>
+                    @else
+                        <td>Alpha</td>
+                        <td></td>
+                    @endif
+                @endif
+                {{-- @if ($item->status == 0)
                     <td>Check In</td>
                 @else
                     <td>Check Out</td>
-                @endif
-                <td><a href="{{ route('attendance.show', $item->id) }}" class="btn btn-sm btn-secondary">Show</a></td>
+                @endif --}}
+                
                 
                 </tr
             @endforeach
@@ -221,11 +241,16 @@
                     return date.toLocaleTimeString();
                 }, name: 'created_at'},
                 {data: function(row) {
-                    return row.status ? "out" : "in";
+                    let data = "";
+                    if (row.detail[0]['type'] == "in" || row.detail[0]['type'] == "out") {
+                        data = "Hadir";
+                    }else if(row.detail[0]['type'] == "sick"){
+                        data = "Sakit";
+                    }else{
+                        data = "Alpha";
+                    }
+                    return data;
                 }, name: 'type'},
-                {data: function(row) {
-                    return row.status ? "Check Out" : "Check In";
-                }, name: 'status'},
                 {data: 'action', name: 'action', orderable: false, searchable: false}
             ]
         });

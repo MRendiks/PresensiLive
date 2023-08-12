@@ -23,6 +23,7 @@ class AttendanceController extends Controller
 
     public function index(Request $request)
     {
+ 
         if ($request->ajax()) {
             $data = Attendance::with(['user', 'detail']);
 
@@ -43,7 +44,6 @@ class AttendanceController extends Controller
         $nama_user =  User::all();
         $page = "home";  
         
-        
         $filter = [
             "pegawai" => "",
             "tahun" => "",
@@ -51,6 +51,43 @@ class AttendanceController extends Controller
             "tanggal" => "",
             "status" => ""
         ];
+        Carbon::setLocale('id');
+        $kemarin = Carbon::now()->toDateString();
+
+        # CEK APAKAH KEMARIN HADIR APA TIDAK
+        $attendancesYesterday = Attendance::whereDate('created_at' , $kemarin)->get();
+
+
+        $list_user = User::all();
+
+        // dd($list_user);
+        
+        foreach ($list_user as $user) {
+            $userHasAttendance = $attendancesYesterday->contains(function ($attendance) use ($user) {
+                return $attendance->user_id === $user->id;
+            });
+
+            if (!$userHasAttendance) {
+                $ketidakhadiran = new Attendance();
+                $ketidakhadiran->user_id = $user->id;
+                $ketidakhadiran->status = 0;
+                $ketidakhadiran->created_at = now();
+                $ketidakhadiran->updated_at = now();
+                $ketidakhadiran->save();
+                
+                $ketidakhadiran_detail = new AttendanceDetail();
+                $ketidakhadiran_detail->attendance_id = $ketidakhadiran->id;
+                $ketidakhadiran_detail->long = 0;
+                $ketidakhadiran_detail->lat = 0;
+                $ketidakhadiran_detail->address = "";
+                $ketidakhadiran_detail->photo = "";
+                $ketidakhadiran_detail->type = "alpha";
+                $ketidakhadiran_detail->created_at = now();
+                $ketidakhadiran_detail->updated_at = now();
+                $ketidakhadiran_detail->save();
+            } 
+            // dd(!$userHasAttendance);
+        }		
 
         return view('pages.attendance.index', compact('nama_user', 'page', 'filter'));
     }
@@ -79,25 +116,32 @@ class AttendanceController extends Controller
             $filter['tahun'] = $request->input('tahun');
             $year = $request->input('tahun');
             $query->whereYear('created_at', $year);
-            
         }
-        
         if(!is_null($request->input('bulan'))){
             $filter['bulan'] = $request->input('bulan');
             $month = $request->input('bulan');
             $query->whereMonth('created_at', $month);
-           
         }
         if(!is_null($request->input('tanggal'))){
             $filter['tanggal'] = $request->input('tanggal');
             $date = $request->input('tanggal');
             $query->whereDate('created_at', $date);
-            
         }
         if(!is_null($request->input('status'))){
             $filter['status'] = $request->input('status');
-            $query->where('status', $request->input('status'));
+            $type = $request->input('status');
+            if ($type == "in") {
+                $query->whereHas('detail', function($query) use ($type){
+                    $query->where('type', $type)
+                        ->orWhere('type', 'out');
+                });
+            }else{
+                $query->whereHas('detail', function($query) use ($type){
+                    $query->where('type', $type);
+                });
+            }
             
+            // $query->where('attendance_details.type', $request->input('status'));
         }
 
         $filterData = $query->get();
@@ -105,15 +149,18 @@ class AttendanceController extends Controller
         $dataShow = $query->first();
 
         # Set tanggal indonesia
-        Carbon::setLocale('id');
-        $bulan = $dataShow->created_at->format('m');
-        $bulan = Carbon::createFromDate(null, $bulan, null);
-        $bulan = $bulan->formatLocalized('%B');
-        
-        // dd($filter);
+        if (!is_null($dataShow)) {
+            Carbon::setLocale('id');
+            $bulan = $dataShow->created_at->format('m');
+            $bulan = Carbon::createFromDate(null, $bulan, null);
+            $bulan = $bulan->formatLocalized('%B');
+        }else{
+            $bulan = "bulan";
+        }
         $nama_user =  User::all();  
 
         $page = "filter";
+
 
         return view('pages.attendance.index', compact('nama_user', 'filterData', 'page', 'dataShow', 'bulan', 'filter'));
 
@@ -138,24 +185,39 @@ class AttendanceController extends Controller
 
         $query = Attendance::query()->with(['user', 'detail']);
         if(!is_null($request->input('pegawai'))){
+            $filter['pegawai'] = $request->input('pegawai');
             $query->where('user_id', $request->input('pegawai'));
         }
         if(!is_null($request->input('tahun'))){
+            $filter['tahun'] = $request->input('tahun');
             $year = $request->input('tahun');
             $query->whereYear('created_at', $year);
         }
         if(!is_null($request->input('bulan'))){
+            $filter['bulan'] = $request->input('bulan');
             $month = $request->input('bulan');
             $query->whereMonth('created_at', $month);
         }
         if(!is_null($request->input('tanggal'))){
+            $filter['tanggal'] = $request->input('tanggal');
             $date = $request->input('tanggal');
             $query->whereDate('created_at', $date);
-            
         }
         if(!is_null($request->input('status'))){
-            $query->where('status', $request->input('status'));
+            $filter['status'] = $request->input('status');
+            $type = $request->input('status');
+            if ($type == "in") {
+                $query->whereHas('detail', function($query) use ($type){
+                    $query->where('type', $type)
+                        ->orWhere('type', 'out');
+                });
+            }else{
+                $query->whereHas('detail', function($query) use ($type){
+                    $query->where('type', $type);
+                });
+            }
             
+            // $query->where('attendance_details.type', $request->input('status'));
         }
 
         $filterData = $query->get();

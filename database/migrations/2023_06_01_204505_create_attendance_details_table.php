@@ -20,7 +20,7 @@ class CreateAttendanceDetailsTable extends Migration
             $table->string('lat');
             $table->string('address');
             $table->string('photo');
-            $table->enum('type', ['in', 'out', 'sick']);
+            $table->enum('type', ['in', 'out', 'sick', 'alpha']);
             $table->timestamps();
         });
     }

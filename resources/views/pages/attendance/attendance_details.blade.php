@@ -23,7 +23,6 @@
 				<th>Tanggal</th>
 				<th>Jam</th>
 				<th>Jenis Absen</th>
-				<th>Status</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -33,11 +32,14 @@
 					<td>{{$item->user->name}}</td>
 					<td>{{$item->created_at->format('Y-m-d')}}</td>
 					<td>{{$item->created_at->format('H:i:s')}}</td>
-					<td>{{$item->detail[0]['type']}}</td>
-					@if ($item->status == 0)
-						<td>Check In</td>
+					@if ($item->detail[0]['type'] == "in" || $item->detail[0]['type'] == "out")
+						<td>Hadir</td>
 					@else
-						<td>Check Out</td>
+						@if ($item->detail[0]['type'] == "sick")
+							<td>Sakit/Izin</td>
+						@else
+							<td>Alpha</td>
+						@endif
 					@endif
 				</tr>
 			@endforeach
