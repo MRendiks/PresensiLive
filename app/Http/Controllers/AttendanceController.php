@@ -57,7 +57,6 @@ class AttendanceController extends Controller
         # CEK APAKAH KEMARIN HADIR APA TIDAK
         $attendancesYesterday = Attendance::whereDate('created_at' , $kemarin)->get();
 
-
         $list_user = User::all();
 
         // dd($list_user);
